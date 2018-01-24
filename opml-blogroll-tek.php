@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name:  OPML Blogroll Plugin
-Plugin URI:   http://thomaskrehbiel.com/plugins/opml-blogroll-tek/
+Plugin URI:   https://github.com/tkrehbiel/opml-blogroll-tek/
 Description:  WordPress Plugin to create a blogroll from a live OPML link.
 Version:      20180122
 Author:       Thomas Krehbiel
