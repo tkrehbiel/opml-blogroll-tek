@@ -126,9 +126,20 @@ function render_opml( $url )
 	foreach( $list as $outline )
 	{
 		echo '<li>';
-		echo '<a href="'.$outline['htmlUrl'].'">';
+		echo '<a class="opml_blogroll_blog" href="'.esc_url( $outline['htmlUrl'] ).'">';
 		echo $outline['title'];
 		echo '</a>';
+		if( !empty( $outline['post_link']) )
+		{
+			echo '<br/>';
+			echo '<a class="opml_blogroll_post" href="'.esc_url( $outline['post_link'] ).'">';
+			echo $outline['post_title'];
+			echo '</a>';
+			echo '<br/>';
+			echo '<span class="opml_blogroll_date">';
+			echo $outline['post_date'];
+			echo '</span>';
+		}
 		echo '</li>'.PHP_EOL;
 	}
 	echo '</ul>'.PHP_EOL;
@@ -179,10 +190,51 @@ function parse_opml( SimpleXMLElement & $node )
 		{
 			// Have to cast as strings otherwise they are SimpleXMLElements,
 			// which cannot be serialized and cached with set_transient().
-			$list[] = array( 'htmlUrl' => (string) $n['htmlUrl'], 'title' => (string) $n['title'] );
+			$entry = array( 
+				'htmlUrl' => (string) $n['htmlUrl'],
+				'xmlUrl' => (string) $n['xmlUrl'],
+				'title' => (string) $n['title']
+			);
+
+			// If an RSS link is available, fetch it.
+			if( !empty($n['xmlUrl']) )
+			{
+				fetch_opml_rss( $n['xmlUrl'], $entry );
+			}
+
+			$list[] = $entry;
 		}
 	}
 	return $list;
+}
+
+function fetch_opml_rss( $link, & $entry )
+{
+	// Disable warnings because this Wordpress RSS feed reading thing
+	// generates a ton of ugly warnings.
+	$olderrorlevel = error_reporting( E_ALL & ~E_WARNING );
+	// Set the cache timeout for RSS feeds - should be less than OPML fetch cache timeout
+	// We set it to 86400 seconds or 24 hours
+	add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 86400;' ) );
+	include_once( ABSPATH . WPINC . '/feed.php' );
+	// Uses WordPress's fetch_feed() function.
+	// I'm led to believe that fetch_feed() does its own caching.
+	$rss = fetch_feed( $link );
+	if( !is_wp_error( $rss ) )
+	{
+		// We only want the most recent (first) item in the feed.
+		$rss_count = $rss->get_item_quantity( 1 );
+		if( $rss_count > 0 )
+		{
+			$rss_items = $rss->get_items( 0, 1 );
+			// We only examine the most recent (presumably the first) item
+			$item = $rss_items[0];
+			$entry['post_title'] = $item->get_title();
+			$entry['post_link'] = $item->get_permalink();
+			$entry['post_date'] = $item->get_date( 'j F Y' );
+		}
+	}
+	error_reporting( $olderrorlevel );
 }
 
 function parse_outline( SimpleXMLElement & $node )
