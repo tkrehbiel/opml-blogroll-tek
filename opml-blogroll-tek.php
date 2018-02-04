@@ -107,7 +107,8 @@ class Opml_Blogroll_Tek_Widget extends WP_Widget {
 		// Delete the transient cache every time settings are saved.
 		// User might change the URL so always need to kill the cache.
 		// Also a fast way to clear the cache if the OPML is updated.
-		delete_transient( "opml_blogroll_tek_list" );
+		// Also clears any cache of RSS feeds so they are updated too.
+		clear_cache();
 
 		return $instance;
 	}
@@ -181,6 +182,25 @@ function fetch_opml( $url )
 	return $list;
 }
 
+// Clear the OPML cache and any RSS feed caches
+function clear_cache()
+{
+	$list = get_transient( "opml_blogroll_tek_list" );
+	if( $list !== FALSE )
+	{
+		$olderrorlevel = error_reporting( E_ALL & ~E_WARNING );
+		add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 0;' ) );
+		include_once( ABSPATH . WPINC . '/feed.php' );
+		foreach( $list as $outline )
+		{
+			$link = $outline['xmlUrl'];
+			$rss = fetch_feed( $link );
+		}	
+		error_reporting( $olderrorlevel );
+	}
+	delete_transient( "opml_blogroll_tek_list" );
+}
+
 function parse_opml( SimpleXMLElement & $node )
 {
 	$list = array();
@@ -215,7 +235,7 @@ function fetch_opml_rss( $link, & $entry )
 	$olderrorlevel = error_reporting( E_ALL & ~E_WARNING );
 	// Set the cache timeout for RSS feeds - should be less than OPML fetch cache timeout
 	// We set it to 86400 seconds or 24 hours
-	add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 86400;' ) );
+	add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 3600;' ) );
 	include_once( ABSPATH . WPINC . '/feed.php' );
 	// Uses WordPress's fetch_feed() function.
 	// I'm led to believe that fetch_feed() does its own caching.
