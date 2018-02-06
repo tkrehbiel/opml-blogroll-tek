@@ -152,7 +152,7 @@ function fetch_opml( $url )
 	$list = get_transient( "opml_blogroll_tek_list" );
 	if( $list === FALSE )
 	{
-		echo '<p>uncached</p>';
+		echo '<p>(Fresh)</p>';
 
 		$response = wp_remote_get( $url );
 		if( is_wp_error( $response ) )
@@ -182,6 +182,19 @@ function fetch_opml( $url )
 	return $list;
 }
 
+// Callback to set fetch_feed() cache time
+function fetch_feed_normal_cache( $seconds )
+{
+	return 3600; // 1 hour
+}
+
+// Callback to hopefully clear fetch_feed() caches
+function fetch_feed_no_cache( $seconds )
+{
+	return 0;
+}
+
+
 // Clear the OPML cache and any RSS feed caches
 function clear_cache()
 {
@@ -189,7 +202,7 @@ function clear_cache()
 	if( $list !== FALSE )
 	{
 		$olderrorlevel = error_reporting( E_ALL & ~E_WARNING );
-		add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 0;' ) );
+		add_filter( 'wp_feed_cache_transient_lifetime', 'fetch_feed_no_cache' );
 		include_once( ABSPATH . WPINC . '/feed.php' );
 		foreach( $list as $outline )
 		{
@@ -234,8 +247,7 @@ function fetch_opml_rss( $link, & $entry )
 	// generates a ton of ugly warnings.
 	$olderrorlevel = error_reporting( E_ALL & ~E_WARNING );
 	// Set the cache timeout for RSS feeds - should be less than OPML fetch cache timeout
-	// We set it to 86400 seconds or 24 hours
-	add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 3600;' ) );
+	add_filter( 'wp_feed_cache_transient_lifetime', 'fetch_feed_normal_cache' );
 	include_once( ABSPATH . WPINC . '/feed.php' );
 	// Uses WordPress's fetch_feed() function.
 	// I'm led to believe that fetch_feed() does its own caching.
