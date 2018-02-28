@@ -176,7 +176,7 @@ function fetch_opml( $url )
 		$list = parse_opml( $xml->body->outline );
 
 		// Cache results so we don't have to get the OPML every time
-		set_transient( "opml_blogroll_tek_list", $list, WEEK_IN_SECONDS );
+		set_transient( "opml_blogroll_tek_list", $list, HOUR_IN_SECONDS );
 	}
 
 	return $list;
@@ -185,7 +185,7 @@ function fetch_opml( $url )
 // Callback to set fetch_feed() cache time
 function fetch_feed_normal_cache( $seconds )
 {
-	return 3600; // 1 hour
+	return 3600*2; // 2 hours
 }
 
 // Callback to hopefully clear fetch_feed() caches
