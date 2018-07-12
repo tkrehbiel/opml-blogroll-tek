@@ -52,7 +52,7 @@ class Opml_Blogroll_Tek_Widget extends WP_Widget {
             echo '</p>';
         }
         else {
-			render_opml( $instance['source'] );
+			render_opml( $instance['source'], $this->id );
         }
         
 		echo $args['after_widget'];
@@ -108,19 +108,19 @@ class Opml_Blogroll_Tek_Widget extends WP_Widget {
 		// User might change the URL so always need to kill the cache.
 		// Also a fast way to clear the cache if the OPML is updated.
 		// Also clears any cache of RSS feeds so they are updated too.
-		clear_cache();
+		clear_cache($this->id);
 
 		return $instance;
 	}
 
 }
 
-function render_opml( $url )
+function render_opml( $url, $id )
 {
 	//So I can quickly disable buggy/unfinished code on the live site:
 	//echo 'Disabled'; return;
 
-	$list = fetch_opml( $url );
+	$list = fetch_opml( $url, $id );
 	if( $list === FALSE ) return;
 
 	echo '<ul class="blogroll">'.PHP_EOL;
@@ -146,10 +146,10 @@ function render_opml( $url )
 	echo '</ul>'.PHP_EOL;
 }
 
-function fetch_opml( $url )
+function fetch_opml( $url, $id )
 {
 	// Attempt to load from cache first
-	$list = get_transient( "opml_blogroll_tek_list" );
+	$list = get_transient( "opml_blogroll_tek_list".$id );
 	if( $list === FALSE )
 	{
 		echo '<p>(Fresh)</p>';
@@ -176,7 +176,7 @@ function fetch_opml( $url )
 		$list = parse_opml( $xml->body->outline );
 
 		// Cache results so we don't have to get the OPML every time
-		set_transient( "opml_blogroll_tek_list", $list, HOUR_IN_SECONDS );
+		set_transient( "opml_blogroll_tek_list".$id, $list, HOUR_IN_SECONDS );
 	}
 
 	return $list;
@@ -196,9 +196,9 @@ function fetch_feed_no_cache( $seconds )
 
 
 // Clear the OPML cache and any RSS feed caches
-function clear_cache()
+function clear_cache( $id )
 {
-	$list = get_transient( "opml_blogroll_tek_list" );
+	$list = get_transient( "opml_blogroll_tek_list".$id );
 	if( $list !== FALSE )
 	{
 		$olderrorlevel = error_reporting( E_ALL & ~E_WARNING );
