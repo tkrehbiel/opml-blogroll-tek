@@ -130,6 +130,13 @@ function render_opml( $url, $id )
 		echo '<a class="opml_blogroll_blog" href="'.esc_url( $outline['htmlUrl'] ).'">';
 		echo $outline['title'];
 		echo '</a>';
+		if( !empty( $outline['handle'] ) )
+		{
+			echo ' ';
+			echo '<a class="opml_blogroll_handle" href="'.esc_url( 'https://twitter.com/'.$outline['handle'] ).'">';
+			echo '@'.$outline['handle'];
+			echo '</a>';
+		}
 		if( !empty( $outline['post_link']) )
 		{
 			echo '<br/>';
@@ -225,11 +232,26 @@ function parse_opml( SimpleXMLElement & $node )
 			// which cannot be serialized and cached with set_transient().
 			$entry = array( 
 				'htmlUrl' => (string) $n['htmlUrl'],
-				'xmlUrl' => (string) $n['xmlUrl'],
-				'title' => (string) $n['title']
+				'xmlUrl' => (string) $n['xmlUrl']
 			);
 
+			// Test for title matching this pattern:
+			// A Blog Title @handle
+			// If so, split into title and Twitter handle.
+			$title = (string) $n['title'];
+			$entry['title'] = $title;
+			$entry['handle'] = '';
+			if( preg_match( '(.*)\s@(\w.*)', $entry['title'], $matches ) )
+			{
+				$entry['title'] = $matches[1];
+				$entry['handle'] = $matches[2];
+			}
+
 			// If an RSS link is available, fetch it.
+			// TODO: This is a huge hit to page load times.
+			// Should re-work to load asynchronously.
+			// Offhand don't know how to communicate
+			// with WordPress caches through Javascript.
 			if( !empty($n['xmlUrl']) )
 			{
 				fetch_opml_rss( $n['xmlUrl'], $entry );
