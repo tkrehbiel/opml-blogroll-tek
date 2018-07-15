@@ -127,22 +127,25 @@ function render_opml( $url, $id )
 	foreach( $list as $outline )
 	{
 		echo '<li>';
+		if( !empty( $outline['post_link']) && !empty( $outline['post_title'] ))
+		{
+			echo '<a class="opml_blogroll_post" href="'.esc_url( $outline['post_link'] ).'">';
+			echo $outline['post_title'];
+			echo '</a>';
+			echo '<br/>';
+		}
 		echo '<a class="opml_blogroll_blog" href="'.esc_url( $outline['htmlUrl'] ).'">';
 		echo $outline['title'];
 		echo '</a>';
 		if( !empty( $outline['handle'] ) )
 		{
-			echo ' ';
+			echo '<br/>';
 			echo '<a class="opml_blogroll_handle" href="'.esc_url( 'https://twitter.com/'.$outline['handle'] ).'">';
 			echo '@'.$outline['handle'];
 			echo '</a>';
 		}
 		if( !empty( $outline['post_link']) )
 		{
-			echo '<br/>';
-			echo '<a class="opml_blogroll_post" href="'.esc_url( $outline['post_link'] ).'">';
-			echo $outline['post_title'];
-			echo '</a>';
 			echo '<br/>';
 			echo '<span class="opml_blogroll_date">';
 			echo $outline['post_date'];
@@ -182,6 +185,8 @@ function fetch_opml( $url, $id )
 
 		$list = parse_opml( $xml->body->outline );
 
+		usort( $list, 'compare_entries' );
+
 		// Cache results so we don't have to get the OPML every time
 		set_transient( "opml_blogroll_tek_list".$id, $list, HOUR_IN_SECONDS );
 	}
@@ -201,7 +206,6 @@ function fetch_feed_no_cache( $seconds )
 	return 0;
 }
 
-
 // Clear the OPML cache and any RSS feed caches
 function clear_cache( $id )
 {
@@ -218,7 +222,7 @@ function clear_cache( $id )
 		}	
 		error_reporting( $olderrorlevel );
 	}
-	delete_transient( "opml_blogroll_tek_list" );
+	delete_transient( "opml_blogroll_tek_list".$id );
 }
 
 function parse_opml( SimpleXMLElement & $node )
@@ -241,7 +245,7 @@ function parse_opml( SimpleXMLElement & $node )
 			$title = (string) $n['title'];
 			$entry['title'] = $title;
 			$entry['handle'] = '';
-			if( preg_match( '(.*)\s@(\w.*)', $entry['title'], $matches ) )
+			if( preg_match( "/^(.*) @(\w.*)$/", $title, $matches ) )
 			{
 				$entry['title'] = $matches[1];
 				$entry['handle'] = $matches[2];
@@ -261,6 +265,11 @@ function parse_opml( SimpleXMLElement & $node )
 		}
 	}
 	return $list;
+}
+
+function compare_entries( $a, $b )
+{
+	return -strcmp( $a['post_order'], $b['post_order'] );
 }
 
 function fetch_opml_rss( $link, & $entry )
@@ -286,6 +295,7 @@ function fetch_opml_rss( $link, & $entry )
 			$entry['post_title'] = $item->get_title();
 			$entry['post_link'] = $item->get_permalink();
 			$entry['post_date'] = $item->get_date( 'j F Y' );
+			$entry['post_order'] = $item->get_date( 'YmdHis' );
 		}
 	}
 	error_reporting( $olderrorlevel );
